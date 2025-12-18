@@ -1,4 +1,20 @@
-"""Hello World level LangChain application with pgvector integration."""
+"""
+Demo Application: LangChain with pgvector
+
+This is a standalone demo script that demonstrates basic LangChain
+functionality with PostgreSQL/pgvector for vector storage.
+
+Purpose:
+    - Test pgvector integration
+    - Demonstrate LangChain basics
+    - Verify database connectivity
+
+Note: This is separate from the main backend API (app/main.py)
+      and uses a different collection to avoid conflicts.
+
+Usage:
+    python app.py
+"""
 
 import os
 import time
@@ -10,11 +26,11 @@ from langchain_openai import OpenAIEmbeddings
 from sqlalchemy import create_engine, text
 
 
-def wait_for_postgres(max_retries: int = 30, delay: int = 2) -> None:
-    """Wait for PostgreSQL to be ready."""
+def wait_for_postgres(max_retries: int = 10, delay: int = 2) -> None:
+    """Wait for Neon PostgreSQL to be ready."""
     connection_string = os.getenv(
         "POSTGRES_CONNECTION_STRING",
-        "postgresql://postgres:postgres@postgres:5432/postgres",
+        "postgresql://neondb_owner:npg_2CUgeTP5KBuO@ep-restless-cell-a1n05rxq-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require",
     )
 
     for i in range(max_retries):
@@ -40,10 +56,10 @@ def main() -> None:
     # Wait for PostgreSQL to be ready
     wait_for_postgres()
 
-    # Connection string for PostgreSQL with pgvector
+    # Connection string for Neon PostgreSQL with pgvector
     connection_string = os.getenv(
         "POSTGRES_CONNECTION_STRING",
-        "postgresql://postgres:postgres@postgres:5432/postgres",
+        "postgresql://neondb_owner:npg_2CUgeTP5KBuO@ep-restless-cell-a1n05rxq-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require",
     )
 
     # Collection name for the vector store (use different collection for app.py)

@@ -1,3 +1,7 @@
+# Demo application dependencies (app.py)
+# For FastAPI backend, see app/requirements.txt
+# For frontend, see frontend/package.json
+
 langchain>=0.1.0
 langchain-community>=0.0.20
 langchain-core>=0.1.0
@@ -5,5 +9,11 @@ langchain-openai>=0.1.0
 psycopg2-binary>=2.9.0
 sqlalchemy>=2.0.0
 pgvector>=0.2.0
-
 openai>=1.0.0
+
+app/model/midm/
+app/model/
+*.safetensors
+*.bin
+*.pt
+*.onnx

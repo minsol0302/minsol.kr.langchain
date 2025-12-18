@@ -1,0 +1,31 @@
+# FastAPI Backend Dependencies
+# This file contains all dependencies needed for the backend API server
+
+# Web framework
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+pydantic>=2.0.0
+pydantic-settings>=2.0.0
+python-multipart>=0.0.6
+
+# LangChain and AI
+langchain>=0.1.0
+langchain-community>=0.0.20
+langchain-core>=0.1.0
+langchain-openai>=0.1.0
+openai>=1.0.0
+
+# Local Model Support (for midm and other local models)
+transformers>=4.30.0
+torch>=2.0.0
+accelerate>=0.20.0  # Required for device_map="auto"
+
+# QLoRA Training Support
+peft>=0.6.0  # Parameter-Efficient Fine-Tuning
+bitsandbytes>=0.41.0  # 4-bit quantization
+datasets>=2.14.0  # Dataset management
+
+# Database
+psycopg2-binary>=2.9.0
+sqlalchemy>=2.0.0
+pgvector>=0.2.0
