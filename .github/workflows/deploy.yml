@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - 'app/**'  # app 폴더 변경시에만 실행
+      - '.github/workflows/deploy.yml'  # 워크플로우 파일 변경시에도 실행
   workflow_dispatch:  # 수동 배포 허용
 
 jobs:
@@ -143,14 +144,39 @@ jobs:
               exit 1
             }
 
+            # Python 및 venv 패키지 확인 및 설치
+            echo "🔍 Python 환경 확인 중..."
+            if ! command -v python3 &> /dev/null; then
+              echo "❌ Python3가 설치되어 있지 않습니다."
+              exit 1
+            fi
+
+            PYTHON_VERSION=$(python3 --version | cut -d' ' -f2 | cut -d'.' -f1,2)
+            echo "📌 Python 버전: $(python3 --version)"
+
+            # python3-venv 패키지 확인 및 설치
+            if ! python3 -m venv --help &> /dev/null; then
+              echo "📦 python3-venv 패키지 설치 중..."
+              sudo apt-get update -qq
+              sudo apt-get install -y python3-venv python3-pip
+            fi
+
             # Python 가상환경 설정
             if [ -d "venv" ]; then
+              echo "✅ 기존 가상환경 사용"
               source venv/bin/activate
             else
               echo "📦 Python 가상환경 생성 중..."
               python3 -m venv venv
               source venv/bin/activate
             fi
+
+            # 가상환경 활성화 확인
+            if [ -z "$VIRTUAL_ENV" ]; then
+              echo "❌ 가상환경 활성화 실패"
+              exit 1
+            fi
+            echo "✅ 가상환경 활성화됨: $VIRTUAL_ENV"
 
             # 의존성 설치
             echo "📦 의존성 설치 중..."
