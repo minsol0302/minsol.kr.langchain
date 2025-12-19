@@ -28,25 +28,66 @@ jobs:
 
       - name: Setup SSH
         working-directory: .  # SSH 설정은 루트에서 실행
+        env:
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+          EC2_USER: ${{ secrets.EC2_USER || 'ubuntu' }}
         run: |
-          # .ssh 디렉토리 생성 (이미 파일로 존재하면 제거)
-          if [ -f ~/.ssh ]; then
-            rm -f ~/.ssh
-          fi
-          mkdir -p ~/.ssh
-          chmod 700 ~/.ssh
+          # 절대 경로 사용
+          SSH_DIR="$HOME/.ssh"
+          SSH_KEY="$SSH_DIR/deploy_key"
 
-          # SSH 키 파일 생성
-          echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
+          # .ssh 디렉토리 생성 (이미 파일로 존재하면 제거)
+          if [ -f "$SSH_DIR" ]; then
+            rm -f "$SSH_DIR"
+          fi
+          mkdir -p "$SSH_DIR"
+          chmod 700 "$SSH_DIR"
+
+          # SSH 키 파일 생성 (개행 문자 처리)
+          # secrets의 내용을 그대로 저장 (base64나 다른 인코딩이 아닌 원본)
+          echo "${{ secrets.EC2_SSH_KEY }}" > "$SSH_KEY"
+          chmod 600 "$SSH_KEY"
+
+          # SSH 키 파일 형식 확인
+          echo "📋 SSH 키 파일 확인:"
+          if grep -q "BEGIN.*PRIVATE KEY" "$SSH_KEY"; then
+            echo "✅ SSH 키 형식 확인됨 (PRIVATE KEY)"
+            # 첫 줄과 마지막 줄만 표시
+            head -n 1 "$SSH_KEY"
+            tail -n 1 "$SSH_KEY"
+          else
+            echo "⚠️ SSH 키 형식이 예상과 다릅니다"
+            echo "첫 50자: $(head -c 50 "$SSH_KEY")"
+          fi
+
+          # 파일 크기 확인
+          echo "📏 SSH 키 파일 크기: $(wc -c < "$SSH_KEY") bytes"
 
           # known_hosts 파일 생성 및 EC2 호스트 추가
-          touch ~/.ssh/known_hosts
-          chmod 600 ~/.ssh/known_hosts
-          ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts 2>/dev/null || true
+          touch "$SSH_DIR/known_hosts"
+          chmod 600 "$SSH_DIR/known_hosts"
+          ssh-keyscan -H "$EC2_HOST" >> "$SSH_DIR/known_hosts" 2>/dev/null || true
+
+          # SSH config 파일 생성
+          cat > "$SSH_DIR/config" << EOF
+          Host ec2-deploy
+            HostName $EC2_HOST
+            User $EC2_USER
+            IdentityFile $SSH_KEY
+            StrictHostKeyChecking no
+            UserKnownHostsFile $SSH_DIR/known_hosts
+          EOF
+          chmod 600 "$SSH_DIR/config"
 
           # SSH 설정 확인
-          ls -la ~/.ssh/
+          echo "📁 SSH 디렉토리 내용:"
+          ls -la "$SSH_DIR/"
+
+          # SSH 연결 테스트
+          echo "🔍 SSH 연결 테스트..."
+          ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no "$EC2_USER@$EC2_HOST" "echo 'SSH 연결 성공!'" || {
+            echo "⚠️ SSH 연결 테스트 실패 (계속 진행)"
+          }
 
       - name: Install dependencies
         run: |
@@ -59,22 +100,39 @@ jobs:
           EC2_HOST: ${{ secrets.EC2_HOST }}
           EC2_USER: ${{ secrets.EC2_USER || 'ubuntu' }}
         run: |
+          # 절대 경로 사용
+          SSH_KEY="$HOME/.ssh/deploy_key"
+
+          # SSH 키 파일 존재 확인
+          if [ ! -f "$SSH_KEY" ]; then
+            echo "❌ SSH 키 파일을 찾을 수 없습니다: $SSH_KEY"
+            exit 1
+          fi
+
+          # SSH 키 권한 확인
+          if [ "$(stat -c %a "$SSH_KEY" 2>/dev/null || stat -f %A "$SSH_KEY" 2>/dev/null)" != "600" ]; then
+            echo "🔧 SSH 키 권한 수정 중..."
+            chmod 600 "$SSH_KEY"
+          fi
+
           # SSH 연결 테스트
           echo "🔍 SSH 연결 테스트..."
-          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no ${EC2_USER}@${EC2_HOST} "echo 'SSH 연결 성공!'" || {
+          ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no -o ConnectTimeout=10 \
+            "$EC2_USER@$EC2_HOST" "echo 'SSH 연결 성공!'" || {
             echo "❌ SSH 연결 실패"
+            echo "💡 EC2_SSH_KEY와 EC2_HOST 설정을 확인하세요"
             exit 1
           }
 
-          # app 폴더를 EC2에 동기화 (SSH 키 명시)
+          # app 폴더를 EC2에 동기화 (SSH 키 절대 경로 사용)
           echo "📤 app 폴더 동기화 중..."
-          rsync -avz -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no" \
+          rsync -avz -e "ssh -i $SSH_KEY -o StrictHostKeyChecking=no -o ConnectTimeout=10" \
             --exclude='.git' --exclude='__pycache__' --exclude='*.pyc' \
-            --exclude='venv' --exclude='.env' \
-            app/ ${EC2_USER}@${EC2_HOST}:/home/ubuntu/rag-app/
+            --exclude='venv' --exclude='.env' --exclude='*.pyc' \
+            app/ "$EC2_USER@$EC2_HOST:/home/ubuntu/rag-app/"
 
           # EC2에서 배포 실행
-          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no ${EC2_USER}@${EC2_HOST} << 'ENDSSH'
+          ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no "$EC2_USER@$EC2_HOST" << 'ENDSSH'
             set -e
 
             echo "🚀 배포 시작..."
