@@ -291,7 +291,7 @@ jobs:
             echo "🔍 systemd 서비스 확인 중..."
             if [ ! -f /etc/systemd/system/fastapi-rag.service ]; then
               echo "📝 systemd 서비스 파일 생성 중..."
-              sudo tee /etc/systemd/system/fastapi-rag.service > /dev/null << 'EOFSERVICE'
+              cat << 'EOFSERVICE' | sudo tee /etc/systemd/system/fastapi-rag.service > /dev/null
 [Unit]
 Description=FastAPI RAG Backend
 After=network.target
