@@ -16,8 +16,8 @@ langchain-openai>=0.1.0
 openai>=1.0.0
 
 # Local Model Support (CPU용)
+# torch는 배포 스크립트에서 CPU 전용 버전으로 별도 설치
 transformers>=4.30.0
-torch>=2.0.0
 accelerate>=0.20.0
 
 # QLoRA Training Support (선택적, CPU에서는 느림)

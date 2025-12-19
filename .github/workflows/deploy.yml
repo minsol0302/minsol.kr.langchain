@@ -239,10 +239,41 @@ jobs:
             echo "📌 Python 경로: $(which python)"
             echo "📌 pip 경로: $(which pip)"
 
+            # 디스크 공간 확인 및 정리
+            echo "💾 디스크 공간 확인 중..."
+            df -h /
+
+            # 항상 정리 작업 수행 (디스크 공간 확보)
+            echo "🧹 디스크 정리 중..."
+            # pip 캐시 정리
+            pip cache purge 2>/dev/null || true
+            # apt 캐시 정리
+            sudo apt-get clean 2>/dev/null || true
+            sudo apt-get autoremove -y 2>/dev/null || true
+            # 임시 파일 정리
+            sudo rm -rf /tmp/* 2>/dev/null || true
+            sudo rm -rf /var/tmp/* 2>/dev/null || true
+            # 로그 파일 정리 (오래된 것만)
+            sudo journalctl --vacuum-time=1d 2>/dev/null || true
+
+            echo "✅ 정리 완료"
+            df -h /
+
             # 의존성 설치
             echo "📦 의존성 설치 중..."
             pip install --upgrade pip
-            pip install -r requirements.txt
+
+            # CPU 전용 torch 먼저 설치 (CUDA 없음, 용량 절약)
+            echo "📦 CPU 전용 PyTorch 설치 중..."
+            pip install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu || {
+              echo "⚠️ CPU 전용 torch 설치 실패"
+              exit 1
+            }
+            echo "✅ PyTorch CPU 버전 설치 완료"
+
+            # 나머지 패키지 설치 (캐시 없이)
+            echo "📦 나머지 패키지 설치 중..."
+            pip install --no-cache-dir -r requirements.txt
 
             # 서비스 재시작
             if systemctl is-active --quiet fastapi-rag 2>/dev/null; then
