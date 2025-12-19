@@ -269,16 +269,9 @@ jobs:
             echo "📦 의존성 설치 중..."
             pip install --upgrade pip
 
-            # CPU 전용 torch 먼저 설치 (CUDA 없음, 용량 절약)
-            echo "📦 CPU 전용 PyTorch 설치 중..."
-            pip install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu || {
-              echo "⚠️ CPU 전용 torch 설치 실패"
-              exit 1
-            }
-            echo "✅ PyTorch CPU 버전 설치 완료"
-
-            # 나머지 패키지 설치 (캐시 없이)
-            echo "📦 나머지 패키지 설치 중..."
+            # OpenAI API만 사용하므로 torch 등 로컬 LLM 패키지는 불필요
+            # requirements.txt의 패키지만 설치
+            echo "📦 패키지 설치 중..."
             pip install --no-cache-dir -r requirements.txt
 
             # EC2 내부 방화벽 확인 및 비활성화

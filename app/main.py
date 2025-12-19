@@ -65,41 +65,24 @@ async def lifespan(app: FastAPI):
 
     initialize_vectorstore()
 
-    # 🔧 ChatService 초기화 및 모델 로드
-    from app.service.chat_service import ChatService
-    from pathlib import Path
+    # 🔧 OpenAI 서비스 초기화
+    from app.service.openai_service import OpenAIService
 
-    print("🤖 ChatService 초기화 중...")
-    # 모델 경로 명시적으로 지정 (app/model/midm)
-    model_path = Path(__file__).parent / "model" / "midm"
-
-    # 모델 경로가 없으면 경고만 출력하고 계속 진행
-    if not model_path.exists():
-        print(f"⚠️ 모델 경로를 찾을 수 없습니다: {model_path}")
-        print("⚠️ ChatService를 초기화하지 않고 계속 진행합니다.")
-        app.state.chat_service = None
-    else:
-        try:
-            chat_service = ChatService(model_path=str(model_path))
-            chat_service.load_model(use_4bit=True)
-            app.state.chat_service = chat_service
-            print("✅ ChatService 초기화 완료!")
-        except Exception as e:
-            print(f"⚠️ ChatService 초기화 실패: {e}")
-            print("⚠️ ChatService 없이 계속 진행합니다.")
-            app.state.chat_service = None
-
-    # 🔧 LLM 생성 및 전역 설정 (하위 호환성을 위해 유지)
-    from app.core.llm import create_llm_from_config
-
-    llm = create_llm_from_config(settings)
-    if llm:
-        print("✅ 사용자 정의 LLM이 설정되었습니다.")
-        # 전역 변수로 저장하여 라우터에서 사용
-        app.state.llm = llm
-    else:
-        print("⚠️ LLM 설정이 불완전합니다. 기본 동작으로 실행합니다.")
-        app.state.llm = None
+    print("🤖 OpenAI 서비스 초기화 중...")
+    try:
+        openai_service = OpenAIService(
+            model=settings.openai_model or "gpt-3.5-turbo"
+        )
+        app.state.openai_service = openai_service
+        print("✅ OpenAI 서비스 초기화 완료!")
+        print(f"📌 사용 모델: {openai_service.model}")
+    except ValueError as e:
+        print(f"❌ OpenAI 서비스 초기화 실패: {e}")
+        print("⚠️ OPENAI_API_KEY 환경변수를 설정하세요.")
+        app.state.openai_service = None
+    except Exception as e:
+        print(f"⚠️ OpenAI 서비스 초기화 중 오류: {e}")
+        app.state.openai_service = None
     print("✅ 애플리케이션 준비 완료!")
     yield
     # 종료 시

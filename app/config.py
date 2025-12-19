@@ -31,8 +31,9 @@ class Settings(BaseSettings):
 
     # OpenAI 설정
     openai_api_key: Optional[str] = Field(default=None, description="OpenAI API 키")
+    openai_model: str = Field(default="gpt-3.5-turbo", description="OpenAI 모델 (기본값: gpt-3.5-turbo)")
 
-    # LLM 설정
+    # LLM 설정 (하위 호환성을 위해 유지)
     llm_provider: str = Field(default="openai", description="LLM provider: openai, korean_local, midm 등")
     local_model_dir: Optional[str] = Field(default=None, description="로컬 모델 디렉터리 경로")
 

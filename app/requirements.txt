@@ -1,5 +1,5 @@
-# FastAPI Backend Dependencies (CPU 실행용)
-# EC2 CPU 인스턴스에서 실행하기 위한 최소 필수 패키지
+# FastAPI Backend Dependencies
+# OpenAI API 기반 - EC2 서버는 API 요청만 처리 (로컬 LLM 불필요)
 
 # Web framework
 fastapi>=0.104.0
@@ -15,14 +15,9 @@ langchain-core>=0.1.0
 langchain-openai>=0.1.0
 openai>=1.0.0
 
-# Local Model Support (CPU용)
-# torch는 배포 스크립트에서 CPU 전용 버전으로 별도 설치
-transformers>=4.30.0
-accelerate>=0.20.0
-
-# QLoRA Training Support (선택적, CPU에서는 느림)
-peft>=0.6.0
-datasets>=2.14.0
+# OpenAI API Support
+# openai 패키지는 이미 langchain-openai에 포함되어 있지만 명시적으로 추가
+# Local Model Support는 제거 (OpenAI 전용으로 전환)
 
 # Database
 psycopg2-binary>=2.9.0
