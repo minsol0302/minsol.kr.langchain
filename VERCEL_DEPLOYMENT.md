@@ -4,11 +4,22 @@
 
 Vercel 배포 시 다음 환경 변수를 설정하세요:
 
+### ⚠️ 중요: Mixed Content 오류 해결
+
+**Vercel은 HTTPS로 서비스되므로, 백엔드도 HTTPS여야 합니다!**
+
 ### 필수 환경 변수
 
+**옵션 1: HTTPS 백엔드 (권장)**
+```
+NEXT_PUBLIC_API_URL=https://api.yourdomain.com
+```
+
+**옵션 2: HTTP 백엔드 (Mixed Content 오류 발생)**
 ```
 NEXT_PUBLIC_API_URL=http://13.209.50.84:8000
 ```
+⚠️ 이 경우 브라우저가 요청을 차단합니다.
 
 ### ⚠️ 포트 번호 필수
 
