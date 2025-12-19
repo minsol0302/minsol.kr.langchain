@@ -151,32 +151,71 @@ jobs:
               exit 1
             fi
 
-            PYTHON_VERSION=$(python3 --version | cut -d' ' -f2 | cut -d'.' -f1,2)
-            echo "📌 Python 버전: $(python3 --version)"
+            PYTHON_FULL_VERSION=$(python3 --version | cut -d' ' -f2)
+            PYTHON_MAJOR_MINOR=$(echo "$PYTHON_FULL_VERSION" | cut -d'.' -f1,2)
+            PYTHON_MAJOR=$(echo "$PYTHON_FULL_VERSION" | cut -d'.' -f1)
+            PYTHON_MINOR=$(echo "$PYTHON_FULL_VERSION" | cut -d'.' -f2)
 
-            # python3-venv 패키지 확인 및 설치
-            if ! python3 -m venv --help &> /dev/null; then
+            echo "📌 Python 버전: $PYTHON_FULL_VERSION"
+            echo "📌 Python 버전 (Major.Minor): $PYTHON_MAJOR_MINOR"
+
+            # Python 버전에 맞는 venv 패키지 설치
+            echo "📦 Python venv 패키지 확인 및 설치 중..."
+            sudo apt-get update -qq
+
+            # Python 버전별 venv 패키지 설치 시도
+            VENV_PACKAGE="python${PYTHON_MAJOR}.${PYTHON_MINOR}-venv"
+            if apt-cache show "$VENV_PACKAGE" &>/dev/null; then
+              echo "📦 $VENV_PACKAGE 패키지 설치 중..."
+              sudo apt-get install -y "$VENV_PACKAGE" python3-pip || {
+                echo "⚠️ $VENV_PACKAGE 설치 실패, python3-venv 시도..."
+                sudo apt-get install -y python3-venv python3-pip
+              }
+            else
               echo "📦 python3-venv 패키지 설치 중..."
-              sudo apt-get update -qq
               sudo apt-get install -y python3-venv python3-pip
             fi
 
+            # venv 모듈 확인
+            if ! python3 -c "import venv" 2>/dev/null; then
+              echo "❌ venv 모듈을 찾을 수 없습니다."
+              echo "💡 설치된 Python venv 패키지 확인 중..."
+              dpkg -l | grep -i python.*venv || echo "venv 패키지 없음"
+              exit 1
+            fi
+            echo "✅ venv 모듈 확인됨"
+
             # Python 가상환경 설정 (불완전한 venv 체크 및 재생성)
-            if [ -d "venv" ] && [ -f "venv/bin/activate" ]; then
+            if [ -d "venv" ] && [ -f "venv/bin/activate" ] && [ -f "venv/bin/python3" ]; then
               echo "✅ 기존 가상환경 확인됨"
             else
               if [ -d "venv" ]; then
                 echo "⚠️ 불완전한 가상환경 감지, 재생성 중..."
                 rm -rf venv
               fi
+
               echo "📦 Python 가상환경 생성 중..."
-              python3 -m venv venv
+              # venv 생성 시도
+              if ! python3 -m venv venv 2>&1; then
+                echo "❌ 가상환경 생성 실패"
+                echo "💡 ensurepip 확인 중..."
+                python3 -c "import ensurepip; print('ensurepip 사용 가능')" 2>&1 || {
+                  echo "⚠️ ensurepip 없음, --without-pip 옵션으로 생성 시도..."
+                  python3 -m venv --without-pip venv
+                  if [ -f "venv/bin/python3" ]; then
+                    echo "📦 pip 설치 중..."
+                    venv/bin/python3 -m ensurepip --upgrade || {
+                      curl -sS https://bootstrap.pypa.io/get-pip.py | venv/bin/python3
+                    }
+                  fi
+                }
+              fi
 
               # venv 생성 확인
-              if [ ! -f "venv/bin/activate" ]; then
-                echo "❌ 가상환경 생성 실패: activate 스크립트를 찾을 수 없습니다"
-                echo "💡 Python 버전 및 venv 모듈 확인 중..."
-                python3 -m venv --help
+              if [ ! -f "venv/bin/activate" ] || [ ! -f "venv/bin/python3" ]; then
+                echo "❌ 가상환경 생성 실패"
+                echo "💡 디버깅 정보:"
+                ls -la venv/ 2>/dev/null || echo "venv 디렉토리 없음"
                 ls -la venv/bin/ 2>/dev/null || echo "venv/bin 디렉토리 없음"
                 exit 1
               fi
