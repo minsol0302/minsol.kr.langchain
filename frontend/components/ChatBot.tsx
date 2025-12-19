@@ -5,17 +5,25 @@ import { Send, Loader2, Bot, User } from 'lucide-react'
 import { chatAPI, Message, DocumentSource } from '../utils/api'
 
 export default function ChatBot() {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      role: 'assistant',
-      content: '안녕하세요! RAG 챗봇입니다. 무엇이 궁금하신가요?',
-      timestamp: new Date().toISOString(),
-    },
-  ])
+  // 클라이언트에서만 초기 메시지 설정 (hydration 오류 방지)
+  const [messages, setMessages] = useState<Message[]>([])
+  const [isMounted, setIsMounted] = useState(false)
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+
+  // 클라이언트 마운트 후 초기 메시지 설정
+  useEffect(() => {
+    setIsMounted(true)
+    setMessages([
+      {
+        role: 'assistant',
+        content: '안녕하세요! RAG 챗봇입니다. 무엇이 궁금하신가요?',
+        timestamp: new Date().toISOString(),
+      },
+    ])
+  }, [])
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -95,6 +103,17 @@ export default function ChatBot() {
   }
 
 
+  // 클라이언트 마운트 전에는 빈 화면 (hydration 오류 방지)
+  if (!isMounted) {
+    return (
+      <div className="flex flex-col h-[600px] bg-white rounded-lg shadow-lg overflow-hidden">
+        <div className="flex-1 flex items-center justify-center">
+          <p className="text-gray-500">로딩 중...</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="flex flex-col h-[600px] bg-white rounded-lg shadow-lg overflow-hidden">
       {/* 메시지 영역 */}
@@ -139,8 +158,8 @@ export default function ChatBot() {
                 </div>
               )}
 
-              {message.timestamp && (
-                <p className="text-xs mt-1 opacity-70">
+              {message.timestamp && isMounted && (
+                <p className="text-xs mt-1 opacity-70" suppressHydrationWarning>
                   {new Date(message.timestamp).toLocaleTimeString('ko-KR', {
                     hour: '2-digit',
                     minute: '2-digit',
@@ -186,7 +205,6 @@ export default function ChatBot() {
             placeholder="메시지를 입력하세요..."
             className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 cursor-text text-gray-900"
             disabled={isLoading}
-            autoFocus
             tabIndex={0}
           />
           <button

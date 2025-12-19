@@ -1,8 +1,19 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import ChatBot from '../components/ChatBot'
 
 export default function Home() {
+  const [isMounted, setIsMounted] = useState(false)
+
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
+
+  if (!isMounted) {
+    return null
+  }
+
   return (
     <main className="flex min-h-screen flex-col items-center justify-center p-4">
       <div className="w-full max-w-4xl">
