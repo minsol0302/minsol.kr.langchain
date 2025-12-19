@@ -161,22 +161,44 @@ jobs:
               sudo apt-get install -y python3-venv python3-pip
             fi
 
-            # Python 가상환경 설정
-            if [ -d "venv" ]; then
-              echo "✅ 기존 가상환경 사용"
-              source venv/bin/activate
+            # Python 가상환경 설정 (불완전한 venv 체크 및 재생성)
+            if [ -d "venv" ] && [ -f "venv/bin/activate" ]; then
+              echo "✅ 기존 가상환경 확인됨"
             else
+              if [ -d "venv" ]; then
+                echo "⚠️ 불완전한 가상환경 감지, 재생성 중..."
+                rm -rf venv
+              fi
               echo "📦 Python 가상환경 생성 중..."
               python3 -m venv venv
-              source venv/bin/activate
+
+              # venv 생성 확인
+              if [ ! -f "venv/bin/activate" ]; then
+                echo "❌ 가상환경 생성 실패: activate 스크립트를 찾을 수 없습니다"
+                echo "💡 Python 버전 및 venv 모듈 확인 중..."
+                python3 -m venv --help
+                ls -la venv/bin/ 2>/dev/null || echo "venv/bin 디렉토리 없음"
+                exit 1
+              fi
+              echo "✅ 가상환경 생성 완료"
             fi
+
+            # 가상환경 활성화
+            echo "🔄 가상환경 활성화 중..."
+            source venv/bin/activate
 
             # 가상환경 활성화 확인
             if [ -z "$VIRTUAL_ENV" ]; then
               echo "❌ 가상환경 활성화 실패"
+              echo "💡 디버깅 정보:"
+              echo "   - venv 디렉토리 존재: $([ -d "venv" ] && echo "예" || echo "아니오")"
+              echo "   - activate 스크립트 존재: $([ -f "venv/bin/activate" ] && echo "예" || echo "아니오")"
+              ls -la venv/bin/activate 2>/dev/null || echo "   - activate 파일을 찾을 수 없음"
               exit 1
             fi
             echo "✅ 가상환경 활성화됨: $VIRTUAL_ENV"
+            echo "📌 Python 경로: $(which python)"
+            echo "📌 pip 경로: $(which pip)"
 
             # 의존성 설치
             echo "📦 의존성 설치 중..."
