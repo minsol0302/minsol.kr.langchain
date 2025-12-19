@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { Send, Loader2, Bot, User } from 'lucide-react'
-import { chatAPI, Message, DocumentSource } from '@/lib/api'
+import { chatAPI, Message, DocumentSource } from '../lib/api'
 
 export default function ChatBot() {
   const [messages, setMessages] = useState<Message[]>([
