@@ -17,10 +17,24 @@ jobs:
 
       - name: Setup SSH
         run: |
+          # .ssh 디렉토리 생성 (이미 파일로 존재하면 제거)
+          if [ -f ~/.ssh ]; then
+            rm -f ~/.ssh
+          fi
           mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+
+          # SSH 키 파일 생성
           echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
+
+          # known_hosts 파일 생성 및 EC2 호스트 추가
+          touch ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+          ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts 2>/dev/null || true
+
+          # SSH 설정 확인
+          ls -la ~/.ssh/
 
       - name: Deploy to EC2
         env:
