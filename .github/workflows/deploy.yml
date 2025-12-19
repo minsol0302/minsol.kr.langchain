@@ -1,21 +1,33 @@
-name: Deploy to EC2
+name: Deploy app to EC2
 
 on:
   push:
     branches:
       - main
+    paths:
+      - 'app/**'  # app 폴더 변경시에만 실행
   workflow_dispatch:  # 수동 배포 허용
 
 jobs:
   deploy:
-    name: Deploy Backend and Frontend to EC2
+    name: Deploy Backend to EC2
     runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: app  # 모든 run 명령은 app/ 디렉토리에서 실행
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
       - name: Setup SSH
+        working-directory: .  # SSH 설정은 루트에서 실행
         run: |
           # .ssh 디렉토리 생성 (이미 파일로 존재하면 제거)
           if [ -f ~/.ssh ]; then
@@ -36,69 +48,64 @@ jobs:
           # SSH 설정 확인
           ls -la ~/.ssh/
 
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt  # app/requirements.txt
+
       - name: Deploy to EC2
+        working-directory: .  # rsync는 루트에서 app 폴더를 대상으로
         env:
           EC2_HOST: ${{ secrets.EC2_HOST }}
           EC2_USER: ${{ secrets.EC2_USER || 'ubuntu' }}
         run: |
+          # app 폴더를 EC2에 동기화
+          rsync -avz --exclude='.git' --exclude='__pycache__' --exclude='*.pyc' \
+            --exclude='venv' --exclude='.env' \
+            app/ ${EC2_USER}@${EC2_HOST}:/home/ubuntu/rag-app/
+
+          # EC2에서 배포 실행
           ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no ${EC2_USER}@${EC2_HOST} << 'ENDSSH'
             set -e
 
             echo "🚀 배포 시작..."
 
-            # 프로젝트 디렉토리로 이동
-            cd ~/my_project/RAG || {
-              echo "❌ 프로젝트 디렉토리를 찾을 수 없습니다."
-              echo "💡 초기 설정이 필요합니다. scripts/setup-ec2.sh를 실행하세요."
+            # 배포 디렉토리로 이동
+            cd /home/ubuntu/rag-app || {
+              echo "❌ 배포 디렉토리를 찾을 수 없습니다."
               exit 1
             }
 
-            # 배포 스크립트 실행
-            if [ -f "scripts/deploy.sh" ]; then
-              echo "📜 배포 스크립트 실행..."
-              chmod +x scripts/deploy.sh
-              bash scripts/deploy.sh
+            # Python 가상환경 설정
+            if [ -d "venv" ]; then
+              source venv/bin/activate
             else
-              echo "⚠️ 배포 스크립트를 찾을 수 없습니다. 수동 배포를 진행합니다."
+              echo "📦 Python 가상환경 생성 중..."
+              python3 -m venv venv
+              source venv/bin/activate
+            fi
 
-              # Git Pull
-              echo "📥 최신 코드 가져오기..."
-              git fetch origin
-              git reset --hard origin/main
-              git clean -fd
+            # 의존성 설치
+            echo "📦 의존성 설치 중..."
+            pip install --upgrade pip
+            pip install -r requirements.txt
 
-              # 백엔드 배포
-              echo "🔧 백엔드 배포 중..."
-              if [ -d "venv" ]; then
-                source venv/bin/activate
-              else
-                python3 -m venv venv
-                source venv/bin/activate
-              fi
+            # 서비스 재시작
+            if systemctl is-active --quiet fastapi-rag 2>/dev/null; then
+              echo "🔄 FastAPI 서비스 재시작 중..."
+              sudo systemctl restart fastapi-rag
+            else
+              echo "⚠️ fastapi-rag 서비스가 없습니다."
+              echo "💡 systemd 서비스를 설정하거나 수동으로 시작하세요."
+            fi
 
-              pip install --upgrade pip
-              pip install -r app/requirements.txt
-
-              # 백엔드 서비스 재시작
-              if systemctl is-active --quiet fastapi-rag 2>/dev/null; then
-                sudo systemctl restart fastapi-rag
-              else
-                echo "⚠️ fastapi-rag 서비스가 없습니다."
-              fi
-
-              # 프론트엔드 배포
-              echo "🎨 프론트엔드 배포 중..."
-              cd frontend
-              npm ci
-              npm run build
-
-              if systemctl is-active --quiet nextjs-frontend 2>/dev/null; then
-                sudo systemctl restart nextjs-frontend
-              else
-                echo "⚠️ nextjs-frontend 서비스가 없습니다."
-              fi
-
-              cd ..
+            # 헬스체크
+            echo "🏥 헬스체크 중..."
+            sleep 5
+            if curl -f http://localhost:8000/health > /dev/null 2>&1; then
+              echo "✅ 백엔드 헬스체크 성공"
+            else
+              echo "⚠️ 백엔드 헬스체크 실패"
             fi
 
             echo "✅ 배포 완료!"
@@ -108,4 +115,4 @@ jobs:
         run: |
           echo "✅ 배포 프로세스 완료"
           echo "백엔드: http://${{ secrets.EC2_HOST }}:8000"
-          echo "프론트엔드: http://${{ secrets.EC2_HOST }}:3000"
+          echo "API 문서: http://${{ secrets.EC2_HOST }}:8000/docs"

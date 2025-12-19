@@ -49,16 +49,19 @@ GitHub 저장소의 Settings → Secrets and variables → Actions에서 다음 
 
 ### 방법 1: 자동 배포 (GitHub Actions)
 
+**중요**: `app/` 폴더의 파일이 변경될 때만 자동 배포가 실행됩니다.
+
 1. **코드 푸시**
    ```bash
-   git add .
-   git commit -m "Deploy to EC2"
+   git add app/
+   git commit -m "Update backend"
    git push origin main
    ```
 
 2. **GitHub Actions 자동 실행**
    - GitHub 저장소의 Actions 탭에서 진행 상황 확인
-   - 자동으로 배포가 진행됩니다
+   - `app/**` 경로 변경 감지 시 자동 배포 실행
+   - 수동 배포: Actions → "Deploy app to EC2" → "Run workflow"
 
 ### 방법 2: 수동 배포
 
@@ -69,7 +72,7 @@ GitHub 저장소의 Settings → Secrets and variables → Actions에서 다음 
 
 2. **배포 스크립트 실행**
    ```bash
-   cd ~/my_project/RAG
+   cd ~/rag-app
    bash scripts/deploy.sh
    ```
 
@@ -96,12 +99,14 @@ chmod +x setup-ec2.sh
 bash setup-ec2.sh
 ```
 
+**참고**: 초기 설정 후 배포 디렉토리는 `/home/ubuntu/rag-app`입니다.
+
 ## 📝 환경 변수 설정
 
 EC2 서버에서 `.env` 파일을 생성/수정:
 
 ```bash
-cd ~/my_project/RAG
+cd ~/rag-app
 nano .env
 ```
 
@@ -119,7 +124,7 @@ Midm 모델 파일을 EC2에 업로드:
 
 ```bash
 # 로컬에서
-scp -i kroaddy.pem -r app/model/midm ubuntu@ec2-13-209-50-84.ap-northeast-2.compute.amazonaws.com:~/my_project/RAG/app/model/
+scp -i kroaddy.pem -r app/model/midm ubuntu@ec2-13-209-50-84.ap-northeast-2.compute.amazonaws.com:~/rag-app/model/
 ```
 
 또는 S3를 사용하여 업로드 (대용량 파일의 경우)
@@ -129,7 +134,6 @@ scp -i kroaddy.pem -r app/model/midm ubuntu@ec2-13-209-50-84.ap-northeast-2.comp
 ### 서비스 상태 확인
 ```bash
 sudo systemctl status fastapi-rag
-sudo systemctl status nextjs-frontend
 ```
 
 ### 서비스 시작/중지/재시작
@@ -138,20 +142,12 @@ sudo systemctl status nextjs-frontend
 sudo systemctl start fastapi-rag
 sudo systemctl stop fastapi-rag
 sudo systemctl restart fastapi-rag
-
-# 프론트엔드
-sudo systemctl start nextjs-frontend
-sudo systemctl stop nextjs-frontend
-sudo systemctl restart nextjs-frontend
 ```
 
 ### 로그 확인
 ```bash
 # 백엔드 로그
 sudo journalctl -u fastapi-rag -f
-
-# 프론트엔드 로그
-sudo journalctl -u nextjs-frontend -f
 
 # 최근 로그만 보기
 sudo journalctl -u fastapi-rag -n 100
@@ -163,7 +159,7 @@ sudo journalctl -u fastapi-rag -n 100
 
 - **백엔드 API**: `http://EC2_PUBLIC_IP:8000`
 - **API 문서**: `http://EC2_PUBLIC_IP:8000/docs`
-- **프론트엔드**: `http://EC2_PUBLIC_IP:3000`
+- **헬스체크**: `http://EC2_PUBLIC_IP:8000/health`
 
 ## 🔍 문제 해결
 
@@ -175,12 +171,11 @@ sudo journalctl -u fastapi-rag -n 100
 2. **EC2 서버 로그 확인**
    ```bash
    sudo journalctl -u fastapi-rag -n 50
-   sudo journalctl -u nextjs-frontend -n 50
    ```
 
 3. **수동 배포 시도**
    ```bash
-   cd ~/my_project/RAG
+   cd ~/rag-app
    bash scripts/deploy.sh
    ```
 
@@ -188,18 +183,27 @@ sudo journalctl -u fastapi-rag -n 100
 
 1. **의존성 확인**
    ```bash
+   cd ~/rag-app
    source venv/bin/activate
    pip list
    ```
 
 2. **포트 충돌 확인**
    ```bash
-   sudo netstat -tulpn | grep -E '8000|3000'
+   sudo netstat -tulpn | grep 8000
    ```
 
 3. **환경 변수 확인**
    ```bash
+   cd ~/rag-app
    cat .env
+   ```
+
+4. **수동 실행 테스트**
+   ```bash
+   cd ~/rag-app
+   source venv/bin/activate
+   uvicorn main:app --host 0.0.0.0 --port 8000
    ```
 
 ## 🔄 롤백 방법
@@ -207,10 +211,9 @@ sudo journalctl -u fastapi-rag -n 100
 이전 버전으로 롤백:
 
 ```bash
-cd ~/my_project/RAG
-git log --oneline  # 커밋 히스토리 확인
-git checkout <이전_커밋_해시>
-bash scripts/deploy.sh
+cd ~/rag-app
+# rsync로 이전 버전 복원하거나
+# GitHub Actions에서 이전 커밋으로 재배포
 ```
 
 ## 📊 모니터링
@@ -231,9 +234,6 @@ iftop
 ```bash
 # 백엔드
 curl http://localhost:8000/health
-
-# 프론트엔드
-curl http://localhost:3000
 ```
 
 ## 🔒 보안 권장사항
