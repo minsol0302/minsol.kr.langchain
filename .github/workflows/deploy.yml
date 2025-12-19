@@ -127,10 +127,16 @@ jobs:
 
           # app 폴더를 EC2에 동기화 (SSH 키 절대 경로 사용)
           echo "📤 app 폴더 동기화 중..."
+          # app 디렉토리 구조를 유지하기 위해 app/를 rag-app/app/로 동기화
           rsync -avz -e "ssh -i $SSH_KEY -o StrictHostKeyChecking=no -o ConnectTimeout=10" \
             --exclude='.git' --exclude='__pycache__' --exclude='*.pyc' \
             --exclude='venv' --exclude='.env' --exclude='*.pyc' \
-            app/ "$EC2_USER@$EC2_HOST:/home/ubuntu/rag-app/"
+            app/ "$EC2_USER@$EC2_HOST:/home/ubuntu/rag-app/app/"
+
+          # main.py를 rag-app 루트로 복사 (uvicorn 실행을 위해)
+          echo "📋 main.py를 루트로 복사 중..."
+          ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no "$EC2_USER@$EC2_HOST" \
+            "cp /home/ubuntu/rag-app/app/main.py /home/ubuntu/rag-app/main.py 2>/dev/null || true"
 
           # EC2에서 배포 실행
           ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no "$EC2_USER@$EC2_HOST" << 'ENDSSH'
@@ -310,7 +316,7 @@ jobs:
               'Environment="PATH=/home/ubuntu/rag-app/venv/bin:/usr/local/bin:/usr/bin:/bin"' \
               'Environment="PYTHONPATH=/home/ubuntu/rag-app"' \
               'EnvironmentFile=-/home/ubuntu/rag-app/.env' \
-              'ExecStart=/home/ubuntu/rag-app/venv/bin/python -m uvicorn main:app --host 0.0.0.0 --port 8000' \
+              'ExecStart=/home/ubuntu/rag-app/venv/bin/python -m uvicorn app.main:app --host 0.0.0.0 --port 8000' \
               'Restart=always' \
               'RestartSec=10' \
               'StandardOutput=journal' \

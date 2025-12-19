@@ -3,11 +3,14 @@
 import sys
 from pathlib import Path
 
-# app 디렉토리에서 직접 실행할 때 프로젝트 루트를 sys.path에 추가
-current_dir = Path(__file__).parent
-project_root = current_dir.parent
-if str(project_root) not in sys.path:
-    sys.path.insert(0, str(project_root))
+# Python 경로 설정: app 모듈을 찾을 수 있도록 경로 추가
+current_file = Path(__file__).absolute()
+# main.py가 /home/ubuntu/rag-app/app/main.py 또는 /home/ubuntu/rag-app/main.py에 있을 수 있음
+if current_file.name == 'main.py':
+    # main.py가 있는 디렉토리의 부모 디렉토리(프로젝트 루트)를 sys.path에 추가
+    project_root = current_file.parent.parent if current_file.parent.name == 'app' else current_file.parent
+    if str(project_root) not in sys.path:
+        sys.path.insert(0, str(project_root))
 
 import asyncio
 from contextlib import asynccontextmanager
