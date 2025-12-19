@@ -1,0 +1,97 @@
+name: Deploy to EC2
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:  # 수동 배포 허용
+
+jobs:
+  deploy:
+    name: Deploy Backend and Frontend to EC2
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Deploy to EC2
+        env:
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+          EC2_USER: ${{ secrets.EC2_USER || 'ubuntu' }}
+        run: |
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no ${EC2_USER}@${EC2_HOST} << 'ENDSSH'
+            set -e
+
+            echo "🚀 배포 시작..."
+
+            # 프로젝트 디렉토리로 이동
+            cd ~/my_project/RAG || {
+              echo "❌ 프로젝트 디렉토리를 찾을 수 없습니다."
+              echo "💡 초기 설정이 필요합니다. scripts/setup-ec2.sh를 실행하세요."
+              exit 1
+            }
+
+            # 배포 스크립트 실행
+            if [ -f "scripts/deploy.sh" ]; then
+              echo "📜 배포 스크립트 실행..."
+              chmod +x scripts/deploy.sh
+              bash scripts/deploy.sh
+            else
+              echo "⚠️ 배포 스크립트를 찾을 수 없습니다. 수동 배포를 진행합니다."
+
+              # Git Pull
+              echo "📥 최신 코드 가져오기..."
+              git fetch origin
+              git reset --hard origin/main
+              git clean -fd
+
+              # 백엔드 배포
+              echo "🔧 백엔드 배포 중..."
+              if [ -d "venv" ]; then
+                source venv/bin/activate
+              else
+                python3 -m venv venv
+                source venv/bin/activate
+              fi
+
+              pip install --upgrade pip
+              pip install -r app/requirements.txt
+
+              # 백엔드 서비스 재시작
+              if systemctl is-active --quiet fastapi-rag 2>/dev/null; then
+                sudo systemctl restart fastapi-rag
+              else
+                echo "⚠️ fastapi-rag 서비스가 없습니다."
+              fi
+
+              # 프론트엔드 배포
+              echo "🎨 프론트엔드 배포 중..."
+              cd frontend
+              npm ci
+              npm run build
+
+              if systemctl is-active --quiet nextjs-frontend 2>/dev/null; then
+                sudo systemctl restart nextjs-frontend
+              else
+                echo "⚠️ nextjs-frontend 서비스가 없습니다."
+              fi
+
+              cd ..
+            fi
+
+            echo "✅ 배포 완료!"
+          ENDSSH
+
+      - name: Deployment Status
+        run: |
+          echo "✅ 배포 프로세스 완료"
+          echo "백엔드: http://${{ secrets.EC2_HOST }}:8000"
+          echo "프론트엔드: http://${{ secrets.EC2_HOST }}:3000"

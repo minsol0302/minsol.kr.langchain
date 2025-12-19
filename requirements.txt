@@ -1,19 +1,30 @@
-# Demo application dependencies (app.py)
-# For FastAPI backend, see app/requirements.txt
-# For frontend, see frontend/package.json
+# FastAPI Backend Dependencies (CPU 실행용)
+# EC2 CPU 인스턴스에서 실행하기 위한 최소 필수 패키지
 
+# Web framework
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+pydantic>=2.0.0
+pydantic-settings>=2.0.0
+python-multipart>=0.0.6
+
+# LangChain and AI
 langchain>=0.1.0
 langchain-community>=0.0.20
 langchain-core>=0.1.0
 langchain-openai>=0.1.0
+openai>=1.0.0
+
+# Local Model Support (CPU용)
+transformers>=4.30.0
+torch>=2.0.0
+accelerate>=0.20.0
+
+# QLoRA Training Support (선택적, CPU에서는 느림)
+peft>=0.6.0
+datasets>=2.14.0
+
+# Database
 psycopg2-binary>=2.9.0
 sqlalchemy>=2.0.0
 pgvector>=0.2.0
-openai>=1.0.0
-
-app/model/midm/
-app/model/
-*.safetensors
-*.bin
-*.pt
-*.onnx
