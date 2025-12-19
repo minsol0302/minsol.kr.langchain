@@ -291,27 +291,26 @@ jobs:
             echo "🔍 systemd 서비스 확인 중..."
             if [ ! -f /etc/systemd/system/fastapi-rag.service ]; then
               echo "📝 systemd 서비스 파일 생성 중..."
-              cat << 'EOFSERVICE' | sudo tee /etc/systemd/system/fastapi-rag.service > /dev/null
-[Unit]
-Description=FastAPI RAG Backend
-After=network.target
-
-[Service]
-Type=simple
-User=ubuntu
-WorkingDirectory=/home/ubuntu/rag-app
-Environment="PATH=/home/ubuntu/rag-app/venv/bin"
-Environment="PYTHONPATH=/home/ubuntu/rag-app"
-EnvironmentFile=/home/ubuntu/rag-app/.env
-ExecStart=/home/ubuntu/rag-app/venv/bin/uvicorn main:app --host 0.0.0.0 --port 8000
-Restart=always
-RestartSec=10
-StandardOutput=journal
-StandardError=journal
-
-[Install]
-WantedBy=multi-user.target
-EOFSERVICE
+              printf '%s\n' \
+                '[Unit]' \
+                'Description=FastAPI RAG Backend' \
+                'After=network.target' \
+                '' \
+                '[Service]' \
+                'Type=simple' \
+                'User=ubuntu' \
+                'WorkingDirectory=/home/ubuntu/rag-app' \
+                'Environment="PATH=/home/ubuntu/rag-app/venv/bin"' \
+                'Environment="PYTHONPATH=/home/ubuntu/rag-app"' \
+                'EnvironmentFile=/home/ubuntu/rag-app/.env' \
+                'ExecStart=/home/ubuntu/rag-app/venv/bin/uvicorn main:app --host 0.0.0.0 --port 8000' \
+                'Restart=always' \
+                'RestartSec=10' \
+                'StandardOutput=journal' \
+                'StandardError=journal' \
+                '' \
+                '[Install]' \
+                'WantedBy=multi-user.target' | sudo tee /etc/systemd/system/fastapi-rag.service > /dev/null
               sudo systemctl daemon-reload
               sudo systemctl enable fastapi-rag
             fi
