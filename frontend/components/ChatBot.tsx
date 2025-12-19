@@ -9,7 +9,7 @@ export default function ChatBot() {
     {
       role: 'assistant',
       content: '안녕하세요! RAG 챗봇입니다. 무엇이 궁금하신가요?',
-      timestamp: new Date(),
+      timestamp: new Date().toISOString(),
     },
   ])
   const [input, setInput] = useState('')
@@ -22,12 +22,18 @@ export default function ChatBot() {
   }
 
   useEffect(() => {
-    scrollToBottom()
+    // 클라이언트에서만 실행
+    if (typeof window !== 'undefined') {
+      scrollToBottom()
+    }
   }, [messages])
 
   // 컴포넌트 마운트 시 입력 필드에 자동 포커스
   useEffect(() => {
-    inputRef.current?.focus()
+    // 클라이언트에서만 실행
+    if (typeof window !== 'undefined') {
+      inputRef.current?.focus()
+    }
   }, [])
 
   const handleSend = async () => {
@@ -36,38 +42,48 @@ export default function ChatBot() {
     const userMessage: Message = {
       role: 'user',
       content: input.trim(),
-      timestamp: new Date(),
+      timestamp: new Date().toISOString(),
     }
 
     setMessages((prev) => [...prev, userMessage])
+    const currentInput = input.trim()
     setInput('')
     setIsLoading(true)
 
     try {
-      const response = await chatAPI.sendMessage(userMessage.content, 3)
+      const response = await chatAPI.sendMessage(currentInput, 3)
 
       const assistantMessage: Message = {
         role: 'assistant',
-        content: response.answer,
-        timestamp: new Date(),
-        sources: response.sources?.map((doc) => ({
-          content: doc.content,
-          metadata: doc.metadata,
-        })) || [],
+        content: response.answer || '응답을 생성할 수 없습니다.',
+        timestamp: new Date().toISOString(),
+        sources: Array.isArray(response.sources)
+          ? response.sources.map((doc: any) => ({
+            content: doc.content || '',
+            metadata: doc.metadata || {},
+          }))
+          : [],
       }
 
       setMessages((prev) => [...prev, assistantMessage])
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error sending message:', error)
       const errorMessage: Message = {
         role: 'assistant',
-        content: '죄송합니다. 오류가 발생했습니다. 다시 시도해주세요.',
-        timestamp: new Date(),
+        content: error?.message?.includes('fetch')
+          ? '서버에 연결할 수 없습니다. 백엔드 서버가 실행 중인지 확인해주세요.'
+          : '죄송합니다. 오류가 발생했습니다. 다시 시도해주세요.',
+        timestamp: new Date().toISOString(),
       }
       setMessages((prev) => [...prev, errorMessage])
     } finally {
       setIsLoading(false)
-      inputRef.current?.focus()
+      // 클라이언트에서만 포커스
+      if (typeof window !== 'undefined') {
+        setTimeout(() => {
+          inputRef.current?.focus()
+        }, 0)
+      }
     }
   }
 
@@ -90,7 +106,7 @@ export default function ChatBot() {
       >
         {messages.map((message, index) => (
           <div
-            key={index}
+            key={`message-${index}-${message.timestamp}`}
             className={`flex items-start gap-3 ${message.role === 'user' ? 'justify-end' : 'justify-start'
               }`}
           >
@@ -114,10 +130,10 @@ export default function ChatBot() {
                   <p className="text-xs font-semibold mb-1">참조 문서:</p>
                   {message.sources.map((source, idx) => (
                     <div
-                      key={idx}
+                      key={`source-${idx}-${source.content?.substring(0, 20)}`}
                       className="text-xs bg-white bg-opacity-50 rounded p-2 mb-1"
                     >
-                      <p className="line-clamp-2">{source.content}</p>
+                      <p className="line-clamp-2">{source.content || ''}</p>
                     </div>
                   ))}
                 </div>
@@ -125,7 +141,7 @@ export default function ChatBot() {
 
               {message.timestamp && (
                 <p className="text-xs mt-1 opacity-70">
-                  {message.timestamp.toLocaleTimeString('ko-KR', {
+                  {new Date(message.timestamp).toLocaleTimeString('ko-KR', {
                     hour: '2-digit',
                     minute: '2-digit',
                   })}
