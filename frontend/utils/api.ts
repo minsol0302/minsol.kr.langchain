@@ -1,0 +1,51 @@
+/**
+ * API 클라이언트
+ * 백엔드 API와 통신하는 함수들
+ */
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+
+export interface Message {
+  role: 'user' | 'assistant'
+  content: string
+  timestamp: Date
+  sources?: DocumentSource[]
+}
+
+export interface DocumentSource {
+  content: string
+  metadata: Record<string, any>
+}
+
+export interface RAGResponse {
+  question: string
+  answer: string
+  sources?: DocumentSource[]
+}
+
+export const chatAPI = {
+  /**
+   * RAG 챗봇에 메시지 전송
+   * @param message 사용자 메시지
+   * @param k 검색할 문서 개수 (기본값: 3)
+   */
+  async sendMessage(message: string, k: number = 3): Promise<RAGResponse> {
+    const response = await fetch(`${API_URL}/rag/query`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        question: message,
+        k: k,
+      }),
+    })
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ detail: 'Unknown error' }))
+      throw new Error(error.detail || `HTTP error! status: ${response.status}`)
+    }
+
+    return await response.json()
+  },
+}
