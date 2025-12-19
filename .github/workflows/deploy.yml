@@ -59,8 +59,17 @@ jobs:
           EC2_HOST: ${{ secrets.EC2_HOST }}
           EC2_USER: ${{ secrets.EC2_USER || 'ubuntu' }}
         run: |
-          # app 폴더를 EC2에 동기화
-          rsync -avz --exclude='.git' --exclude='__pycache__' --exclude='*.pyc' \
+          # SSH 연결 테스트
+          echo "🔍 SSH 연결 테스트..."
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no ${EC2_USER}@${EC2_HOST} "echo 'SSH 연결 성공!'" || {
+            echo "❌ SSH 연결 실패"
+            exit 1
+          }
+
+          # app 폴더를 EC2에 동기화 (SSH 키 명시)
+          echo "📤 app 폴더 동기화 중..."
+          rsync -avz -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no" \
+            --exclude='.git' --exclude='__pycache__' --exclude='*.pyc' \
             --exclude='venv' --exclude='.env' \
             app/ ${EC2_USER}@${EC2_HOST}:/home/ubuntu/rag-app/
 
