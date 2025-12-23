@@ -299,7 +299,7 @@ jobs:
             echo "📊 환경 변수 개수: \${ENV_COUNT}"
 
             # DATABASE_URL 중복 확인
-            DATABASE_URL_COUNT=$(grep -c "^DATABASE_URL=" "\${ENV_FILE}" 2>/dev/null || echo "0")
+            DATABASE_URL_COUNT=\$(grep -c "^DATABASE_URL=" "\${ENV_FILE}" 2>/dev/null || echo "0")
             if [ "\${DATABASE_URL_COUNT}" -gt 1 ]; then
               echo "❌ DATABASE_URL이 중복되어 있습니다! (\${DATABASE_URL_COUNT}개)"
               echo "💡 .env 파일 내용:"
@@ -334,13 +334,13 @@ jobs:
               exit 1
             fi
 
-            PYTHON_FULL_VERSION=$(python3 --version | cut -d' ' -f2)
-            PYTHON_MAJOR_MINOR=$(echo "$PYTHON_FULL_VERSION" | cut -d'.' -f1,2)
-            PYTHON_MAJOR=$(echo "$PYTHON_FULL_VERSION" | cut -d'.' -f1)
-            PYTHON_MINOR=$(echo "$PYTHON_FULL_VERSION" | cut -d'.' -f2)
+            PYTHON_FULL_VERSION=\$(python3 --version | cut -d' ' -f2)
+            PYTHON_MAJOR_MINOR=\$(echo "\${PYTHON_FULL_VERSION}" | cut -d'.' -f1,2)
+            PYTHON_MAJOR=\$(echo "\${PYTHON_FULL_VERSION}" | cut -d'.' -f1)
+            PYTHON_MINOR=\$(echo "\${PYTHON_FULL_VERSION}" | cut -d'.' -f2)
 
-            echo "📌 Python 버전: $PYTHON_FULL_VERSION"
-            echo "📌 Python 버전 (Major.Minor): $PYTHON_MAJOR_MINOR"
+            echo "📌 Python 버전: \${PYTHON_FULL_VERSION}"
+            echo "📌 Python 버전 (Major.Minor): \${PYTHON_MAJOR_MINOR}"
 
             # Python 버전에 맞는 venv 패키지 설치
             echo "📦 Python venv 패키지 확인 및 설치 중..."
@@ -369,7 +369,7 @@ jobs:
             echo "✅ venv 모듈 확인됨"
 
             # 현재 작업 디렉토리 확인
-            echo "📌 현재 작업 디렉토리: $(pwd)"
+            echo "📌 현재 작업 디렉토리: \$(pwd)"
             echo "📌 DEPLOY_DIR: \${DEPLOY_DIR}"
 
             # Python 가상환경 설정 (불완전한 venv 체크 및 재생성)
@@ -382,7 +382,7 @@ jobs:
               fi
 
               echo "📦 Python 가상환경 생성 중..."
-              echo "📌 생성 위치: $(pwd)/venv"
+              echo "📌 생성 위치: \$(pwd)/venv"
 
               # venv 생성 시도
               if ! python3 -m venv venv 2>&1; then
@@ -437,7 +437,7 @@ jobs:
             echo "🔄 가상환경 활성화 준비 중..."
             if [ ! -d "venv" ]; then
               echo "❌ venv 디렉토리가 존재하지 않습니다."
-              echo "💡 현재 디렉토리: $(pwd)"
+              echo "💡 현재 디렉토리: \$(pwd)"
               exit 1
             fi
 
@@ -461,15 +461,15 @@ jobs:
             if [ -z "\${VIRTUAL_ENV}" ]; then
               echo "❌ 가상환경 활성화 실패"
               echo "💡 디버깅 정보:"
-              echo "   - 현재 디렉토리: $(pwd)"
-              echo "   - venv 디렉토리 존재: $([ -d "venv" ] && echo "예" || echo "아니오")"
-              echo "   - activate 스크립트 존재: $([ -f "venv/bin/activate" ] && echo "예" || echo "아니오")"
+              echo "   - 현재 디렉토리: \$(pwd)"
+              echo "   - venv 디렉토리 존재: \$([ -d "venv" ] && echo "예" || echo "아니오")"
+              echo "   - activate 스크립트 존재: \$([ -f "venv/bin/activate" ] && echo "예" || echo "아니오")"
               ls -la venv/bin/activate 2>/dev/null || echo "   - activate 파일을 찾을 수 없음"
               exit 1
             fi
-            echo "✅ 가상환경 활성화됨: $VIRTUAL_ENV"
-            echo "📌 Python 경로: $(which python)"
-            echo "📌 pip 경로: $(which pip)"
+            echo "✅ 가상환경 활성화됨: \${VIRTUAL_ENV}"
+            echo "📌 Python 경로: \$(which python)"
+            echo "📌 pip 경로: \$(which pip)"
 
             # 디스크 공간 확인 및 정리
             echo "💾 디스크 공간 확인 중..."
@@ -670,16 +670,16 @@ jobs:
 
             # 외부 접속 가능 여부 확인 (EC2 내부에서)
             echo "🌐 외부 접속 정보..."
-            PUBLIC_IP=$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4 2>/dev/null || echo "확인 불가")
-            echo "📌 Public IP: $PUBLIC_IP"
-            if [ "$PUBLIC_IP" != "확인 불가" ]; then
+            PUBLIC_IP=$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4 2>/dev/null || echo '확인 불가')
+            echo "📌 Public IP: \${PUBLIC_IP}"
+            if [ "\${PUBLIC_IP}" != "확인 불가" ]; then
               echo "✅ 외부 접속 URL:"
-              echo "   - API: http://$PUBLIC_IP:8000"
-              echo "   - Swagger UI: http://$PUBLIC_IP:8000/docs"
-              echo "   - Health: http://$PUBLIC_IP:8000/health"
+              echo "   - API: http://\${PUBLIC_IP}:8000"
+              echo "   - Swagger UI: http://\${PUBLIC_IP}:8000/docs"
+              echo "   - Health: http://\${PUBLIC_IP}:8000/health"
               echo ""
               echo "🔍 외부 접속 테스트 (EC2 내부에서):"
-              if curl -f --max-time 5 http://$PUBLIC_IP:8000/health > /dev/null 2>&1; then
+              if curl -f --max-time 5 "http://\${PUBLIC_IP}:8000/health" > /dev/null 2>&1; then
                 echo "✅ 외부 IP로 접속 가능"
               else
                 echo "⚠️ 외부 IP로 접속 불가 (Security Group 확인 필요)"
