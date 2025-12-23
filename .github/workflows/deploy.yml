@@ -199,10 +199,27 @@ jobs:
 
             # 배포 디렉토리 확인 및 생성
             DEPLOY_DIR="/home/ubuntu/rag-app"
+
+            # 변수 검증
+            if [ -z "$DEPLOY_DIR" ]; then
+              echo "❌ DEPLOY_DIR 변수가 설정되지 않았습니다."
+              exit 1
+            fi
+
+            echo "📌 DEPLOY_DIR: $DEPLOY_DIR"
+
+            # 디렉토리 생성
             if [ ! -d "$DEPLOY_DIR" ]; then
               echo "📁 배포 디렉토리 생성 중: $DEPLOY_DIR"
-              mkdir -p "$DEPLOY_DIR"
-              chown -R ubuntu:ubuntu "$DEPLOY_DIR" 2>/dev/null || true
+              mkdir -p "$DEPLOY_DIR" || {
+                echo "❌ 디렉토리 생성 실패: $DEPLOY_DIR"
+                exit 1
+              }
+              # 권한 설정 (가능한 경우)
+              chown -R ubuntu:ubuntu "$DEPLOY_DIR" 2>/dev/null || sudo chown -R ubuntu:ubuntu "$DEPLOY_DIR" 2>/dev/null || true
+              echo "✅ 배포 디렉토리 생성 완료"
+            else
+              echo "✅ 배포 디렉토리 이미 존재함: $DEPLOY_DIR"
             fi
 
             # 환경 변수 설정 (.env 파일 생성/업데이트)
