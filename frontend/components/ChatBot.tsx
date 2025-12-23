@@ -76,11 +76,19 @@ export default function ChatBot() {
       setMessages((prev) => [...prev, assistantMessage])
     } catch (error: any) {
       console.error('Error sending message:', error)
+      let errorContent = '죄송합니다. 오류가 발생했습니다. 다시 시도해주세요.'
+
+      if (error?.message?.includes('fetch') || error?.message?.includes('연결')) {
+        errorContent = '서버에 연결할 수 없습니다. 백엔드 서버가 실행 중인지 확인해주세요.'
+      } else if (error?.message?.includes('API URL')) {
+        errorContent = 'API URL이 설정되지 않았습니다. 환경 변수를 확인해주세요.'
+      } else if (error?.message) {
+        errorContent = error.message
+      }
+
       const errorMessage: Message = {
         role: 'assistant',
-        content: error?.message?.includes('fetch')
-          ? '서버에 연결할 수 없습니다. 백엔드 서버가 실행 중인지 확인해주세요.'
-          : '죄송합니다. 오류가 발생했습니다. 다시 시도해주세요.',
+        content: errorContent,
         timestamp: new Date().toISOString(),
       }
       setMessages((prev) => [...prev, errorMessage])

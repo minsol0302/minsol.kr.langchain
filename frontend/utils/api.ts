@@ -31,22 +31,34 @@ export const chatAPI = {
    * @param k 검색할 문서 개수 (기본값: 3)
    */
   async sendMessage(message: string, k: number = 3): Promise<RAGResponse> {
-    const response = await fetch(`${API_URL}/rag/query`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        question: message,
-        k: k,
-      }),
-    })
-
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ detail: 'Unknown error' }))
-      throw new Error(error.detail || `HTTP error! status: ${response.status}`)
+    if (!API_URL) {
+      throw new Error('API URL이 설정되지 않았습니다. NEXT_PUBLIC_API_URL 환경 변수를 확인하세요.')
     }
 
-    return await response.json()
+    try {
+      const response = await fetch(`${API_URL}/rag/query`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          question: message,
+          k: k,
+        }),
+      })
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ detail: 'Unknown error' }))
+        throw new Error(error.detail || `HTTP error! status: ${response.status}`)
+      }
+
+      return await response.json()
+    } catch (error: any) {
+      // 네트워크 오류 처리
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        throw new Error(`서버에 연결할 수 없습니다. API URL: ${API_URL}`)
+      }
+      throw error
+    }
   },
 }
