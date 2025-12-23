@@ -170,9 +170,36 @@ jobs:
               echo "⚠️ OPENAI_API_KEY가 GitHub Secrets에 설정되지 않았습니다."
             fi
 
-            # DATABASE_URL이 없으면 추가 (필요시)
-            if ! grep -q "^DATABASE_URL=" "$ENV_FILE" 2>/dev/null; then
-              echo "⚠️ DATABASE_URL이 .env 파일에 없습니다. 수동으로 설정하세요."
+            # DATABASE_URL 설정 (GitHub Secrets에서)
+            if [ -n "${{ secrets.DATABASE_URL }}" ]; then
+              # 기존 DATABASE_URL이 있으면 업데이트, 없으면 추가
+              if grep -q "^DATABASE_URL=" "$ENV_FILE" 2>/dev/null; then
+                # 기존 URL 업데이트
+                sed -i "s|^DATABASE_URL=.*|DATABASE_URL=${{ secrets.DATABASE_URL }}|" "$ENV_FILE"
+                echo "✅ DATABASE_URL 업데이트됨"
+              else
+                # 새로 추가
+                echo "DATABASE_URL=${{ secrets.DATABASE_URL }}" >> "$ENV_FILE"
+                echo "✅ DATABASE_URL 추가됨"
+              fi
+            else
+              echo "⚠️ DATABASE_URL이 GitHub Secrets에 설정되지 않았습니다."
+            fi
+
+            # LLM_PROVIDER 설정 (GitHub Secrets에서)
+            if [ -n "${{ secrets.LLM_PROVIDER }}" ]; then
+              # 기존 LLM_PROVIDER가 있으면 업데이트, 없으면 추가
+              if grep -q "^LLM_PROVIDER=" "$ENV_FILE" 2>/dev/null; then
+                # 기존 값 업데이트
+                sed -i "s|^LLM_PROVIDER=.*|LLM_PROVIDER=${{ secrets.LLM_PROVIDER }}|" "$ENV_FILE"
+                echo "✅ LLM_PROVIDER 업데이트됨"
+              else
+                # 새로 추가
+                echo "LLM_PROVIDER=${{ secrets.LLM_PROVIDER }}" >> "$ENV_FILE"
+                echo "✅ LLM_PROVIDER 추가됨"
+              fi
+            else
+              echo "⚠️ LLM_PROVIDER가 GitHub Secrets에 설정되지 않았습니다."
             fi
 
             # .env 파일 권한 확인
