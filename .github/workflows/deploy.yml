@@ -200,45 +200,47 @@ jobs:
             # 배포 디렉토리 확인 및 생성
             DEPLOY_DIR="/home/ubuntu/rag-app"
 
-            # 변수 검증
-            if [ -z "$DEPLOY_DIR" ]; then
+            # 변수 검증 (명시적으로 확인)
+            if [ -z "\${DEPLOY_DIR}" ] || [ "\${DEPLOY_DIR}" = "" ]; then
               echo "❌ DEPLOY_DIR 변수가 설정되지 않았습니다."
+              echo "💡 디버깅: DEPLOY_DIR 값 확인 중..."
+              echo "   DEPLOY_DIR='\${DEPLOY_DIR}'"
               exit 1
             fi
 
-            echo "📌 DEPLOY_DIR: $DEPLOY_DIR"
+            echo "📌 DEPLOY_DIR: \${DEPLOY_DIR}"
 
             # 디렉토리 생성
-            if [ ! -d "$DEPLOY_DIR" ]; then
-              echo "📁 배포 디렉토리 생성 중: $DEPLOY_DIR"
-              mkdir -p "$DEPLOY_DIR" || {
-                echo "❌ 디렉토리 생성 실패: $DEPLOY_DIR"
+            if [ ! -d "\${DEPLOY_DIR}" ]; then
+              echo "📁 배포 디렉토리 생성 중: \${DEPLOY_DIR}"
+              mkdir -p "\${DEPLOY_DIR}" || {
+                echo "❌ 디렉토리 생성 실패: \${DEPLOY_DIR}"
                 exit 1
               }
               # 권한 설정 (가능한 경우)
-              chown -R ubuntu:ubuntu "$DEPLOY_DIR" 2>/dev/null || sudo chown -R ubuntu:ubuntu "$DEPLOY_DIR" 2>/dev/null || true
+              chown -R ubuntu:ubuntu "\${DEPLOY_DIR}" 2>/dev/null || sudo chown -R ubuntu:ubuntu "\${DEPLOY_DIR}" 2>/dev/null || true
               echo "✅ 배포 디렉토리 생성 완료"
             else
-              echo "✅ 배포 디렉토리 이미 존재함: $DEPLOY_DIR"
+              echo "✅ 배포 디렉토리 이미 존재함: \${DEPLOY_DIR}"
             fi
 
             # 환경 변수 설정 (.env 파일 생성/업데이트)
             echo "🔐 환경 변수 설정 중..."
-            ENV_FILE="$DEPLOY_DIR/.env"
+            ENV_FILE="\${DEPLOY_DIR}/.env"
 
             # ENV_FILE 변수 검증
-            if [ -z "$ENV_FILE" ]; then
+            if [ -z "\${ENV_FILE}" ]; then
               echo "❌ ENV_FILE 변수가 설정되지 않았습니다."
               exit 1
             fi
 
-            echo "📌 ENV_FILE 경로: $ENV_FILE"
+            echo "📌 ENV_FILE 경로: \${ENV_FILE}"
 
             # .env 파일이 없으면 생성
-            if [ ! -f "$ENV_FILE" ]; then
+            if [ ! -f "\${ENV_FILE}" ]; then
               echo "📝 .env 파일 생성 중..."
-              touch "$ENV_FILE"
-              chmod 600 "$ENV_FILE"
+              touch "\${ENV_FILE}"
+              chmod 600 "\${ENV_FILE}"
               echo "✅ .env 파일 생성 완료"
             else
               echo "✅ 기존 .env 파일 확인됨"
@@ -247,13 +249,13 @@ jobs:
             # OpenAI API 키 설정 (GitHub Secrets에서)
             if [ -n "${{ secrets.OPENAI_API_KEY }}" ]; then
               # 기존 OPENAI_API_KEY가 있으면 업데이트, 없으면 추가
-              if grep -q "^OPENAI_API_KEY=" "$ENV_FILE" 2>/dev/null; then
+              if grep -q "^OPENAI_API_KEY=" "\${ENV_FILE}" 2>/dev/null; then
                 # 기존 키 업데이트
-                sed -i "s|^OPENAI_API_KEY=.*|OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}|" "$ENV_FILE"
+                sed -i "s|^OPENAI_API_KEY=.*|OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}|" "\${ENV_FILE}"
                 echo "✅ OPENAI_API_KEY 업데이트됨"
               else
                 # 새로 추가
-                echo "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" >> "$ENV_FILE"
+                echo "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" >> "\${ENV_FILE}"
                 echo "✅ OPENAI_API_KEY 추가됨"
               fi
             else
@@ -263,13 +265,13 @@ jobs:
             # DATABASE_URL 설정 (GitHub Secrets에서)
             if [ -n "${{ secrets.DATABASE_URL }}" ]; then
               # 기존 DATABASE_URL이 있으면 업데이트, 없으면 추가
-              if grep -q "^DATABASE_URL=" "$ENV_FILE" 2>/dev/null; then
+              if grep -q "^DATABASE_URL=" "\${ENV_FILE}" 2>/dev/null; then
                 # 기존 URL 업데이트
-                sed -i "s|^DATABASE_URL=.*|DATABASE_URL=${{ secrets.DATABASE_URL }}|" "$ENV_FILE"
+                sed -i "s|^DATABASE_URL=.*|DATABASE_URL=${{ secrets.DATABASE_URL }}|" "\${ENV_FILE}"
                 echo "✅ DATABASE_URL 업데이트됨"
               else
                 # 새로 추가
-                echo "DATABASE_URL=${{ secrets.DATABASE_URL }}" >> "$ENV_FILE"
+                echo "DATABASE_URL=${{ secrets.DATABASE_URL }}" >> "\${ENV_FILE}"
                 echo "✅ DATABASE_URL 추가됨"
               fi
             else
@@ -279,13 +281,13 @@ jobs:
             # LLM_PROVIDER 설정 (GitHub Secrets에서)
             if [ -n "${{ secrets.LLM_PROVIDER }}" ]; then
               # 기존 LLM_PROVIDER가 있으면 업데이트, 없으면 추가
-              if grep -q "^LLM_PROVIDER=" "$ENV_FILE" 2>/dev/null; then
+              if grep -q "^LLM_PROVIDER=" "\${ENV_FILE}" 2>/dev/null; then
                 # 기존 값 업데이트
-                sed -i "s|^LLM_PROVIDER=.*|LLM_PROVIDER=${{ secrets.LLM_PROVIDER }}|" "$ENV_FILE"
+                sed -i "s|^LLM_PROVIDER=.*|LLM_PROVIDER=${{ secrets.LLM_PROVIDER }}|" "\${ENV_FILE}"
                 echo "✅ LLM_PROVIDER 업데이트됨"
               else
                 # 새로 추가
-                echo "LLM_PROVIDER=${{ secrets.LLM_PROVIDER }}" >> "$ENV_FILE"
+                echo "LLM_PROVIDER=${{ secrets.LLM_PROVIDER }}" >> "\${ENV_FILE}"
                 echo "✅ LLM_PROVIDER 추가됨"
               fi
             else
@@ -293,12 +295,12 @@ jobs:
             fi
 
             # .env 파일 권한 확인
-            chmod 600 "$ENV_FILE"
+            chmod 600 "\${ENV_FILE}"
             echo "✅ 환경 변수 설정 완료"
 
             # 배포 디렉토리로 이동
-            cd /home/ubuntu/rag-app || {
-              echo "❌ 배포 디렉토리를 찾을 수 없습니다."
+            cd "\${DEPLOY_DIR}" || {
+              echo "❌ 배포 디렉토리를 찾을 수 없습니다: \${DEPLOY_DIR}"
               exit 1
             }
 
