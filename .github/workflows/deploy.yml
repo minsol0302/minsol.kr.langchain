@@ -265,7 +265,7 @@ jobs:
             # OpenAI API 키 설정 (GitHub Secrets에서)
             if [ -n "${{ secrets.OPENAI_API_KEY }}" ]; then
               printf 'OPENAI_API_KEY=%s\n' "${{ secrets.OPENAI_API_KEY }}" >> "\${ENV_FILE}"
-              ENV_COUNT=$((ENV_COUNT + 1))
+              ENV_COUNT=\$((ENV_COUNT + 1))
               echo "✅ OPENAI_API_KEY 추가됨"
             else
               echo "⚠️ OPENAI_API_KEY가 GitHub Secrets에 설정되지 않았습니다."
@@ -279,7 +279,7 @@ jobs:
               mv "\${ENV_FILE}.tmp" "\${ENV_FILE}" 2>/dev/null || true
               # 새로 추가
               printf 'DATABASE_URL=%s\n' "${{ secrets.DATABASE_URL }}" >> "\${ENV_FILE}"
-              ENV_COUNT=$((ENV_COUNT + 1))
+              ENV_COUNT=\$((ENV_COUNT + 1))
               echo "✅ DATABASE_URL 추가됨"
             else
               echo "⚠️ DATABASE_URL이 GitHub Secrets에 설정되지 않았습니다."
@@ -288,7 +288,7 @@ jobs:
             # LLM_PROVIDER 설정 (GitHub Secrets에서)
             if [ -n "${{ secrets.LLM_PROVIDER }}" ]; then
               printf 'LLM_PROVIDER=%s\n' "${{ secrets.LLM_PROVIDER }}" >> "\${ENV_FILE}"
-              ENV_COUNT=$((ENV_COUNT + 1))
+              ENV_COUNT=\$((ENV_COUNT + 1))
               echo "✅ LLM_PROVIDER 추가됨"
             else
               echo "⚠️ LLM_PROVIDER가 GitHub Secrets에 설정되지 않았습니다."
@@ -670,7 +670,7 @@ jobs:
 
             # 외부 접속 가능 여부 확인 (EC2 내부에서)
             echo "🌐 외부 접속 정보..."
-            PUBLIC_IP=$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4 2>/dev/null || echo '확인 불가')
+            PUBLIC_IP=\$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4 2>/dev/null || echo '확인 불가')
             echo "📌 Public IP: \${PUBLIC_IP}"
             if [ "\${PUBLIC_IP}" != "확인 불가" ]; then
               echo "✅ 외부 접속 URL:"
