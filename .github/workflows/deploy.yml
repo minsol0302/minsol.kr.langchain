@@ -37,6 +37,31 @@ jobs:
           SSH_DIR="$HOME/.ssh"
           SSH_KEY="$SSH_DIR/deploy_key"
 
+          # 환경 변수 설정 및 검증
+          EC2_HOST="${{ secrets.EC2_HOST }}"
+          EC2_USER="${{ secrets.EC2_USER || 'ubuntu' }}"
+
+          # 변수 검증
+          if [ -z "$EC2_HOST" ]; then
+            echo "❌ EC2_HOST가 설정되지 않았습니다."
+            exit 1
+          fi
+
+          if [ -z "$EC2_USER" ]; then
+            echo "⚠️ EC2_USER가 설정되지 않아 기본값 'ubuntu'를 사용합니다."
+            EC2_USER="ubuntu"
+          fi
+
+          # 사용자 이름에 잘못된 문자가 있는지 확인
+          if echo "$EC2_USER" | grep -qE '[^a-zA-Z0-9_-]'; then
+            echo "❌ EC2_USER에 잘못된 문자가 포함되어 있습니다: $EC2_USER"
+            echo "💡 사용자 이름은 영문자, 숫자, 하이픈(-), 언더스코어(_)만 사용할 수 있습니다."
+            exit 1
+          fi
+
+          echo "📌 EC2_HOST: $EC2_HOST"
+          echo "📌 EC2_USER: $EC2_USER"
+
           # .ssh 디렉토리 생성 (이미 파일로 존재하면 제거)
           if [ -f "$SSH_DIR" ]; then
             rm -f "$SSH_DIR"
@@ -72,11 +97,11 @@ jobs:
           # SSH config 파일 생성
           cat > "$SSH_DIR/config" << EOF
           Host ec2-deploy
-            HostName $EC2_HOST
-            User $EC2_USER
-            IdentityFile $SSH_KEY
+            HostName ${EC2_HOST}
+            User ${EC2_USER}
+            IdentityFile ${SSH_KEY}
             StrictHostKeyChecking no
-            UserKnownHostsFile $SSH_DIR/known_hosts
+            UserKnownHostsFile ${SSH_DIR}/known_hosts
           EOF
           chmod 600 "$SSH_DIR/config"
 
@@ -86,7 +111,7 @@ jobs:
 
           # SSH 연결 테스트
           echo "🔍 SSH 연결 테스트..."
-          ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no "$EC2_USER@$EC2_HOST" "echo 'SSH 연결 성공!'" || {
+          ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no "${EC2_USER}@${EC2_HOST}" "echo 'SSH 연결 성공!'" || {
             echo "⚠️ SSH 연결 테스트 실패 (계속 진행)"
           }
 
@@ -104,6 +129,31 @@ jobs:
           # 절대 경로 사용
           SSH_KEY="$HOME/.ssh/deploy_key"
 
+          # 환경 변수 설정 및 검증
+          EC2_HOST="${{ secrets.EC2_HOST }}"
+          EC2_USER="${{ secrets.EC2_USER || 'ubuntu' }}"
+
+          # 변수 검증
+          if [ -z "$EC2_HOST" ]; then
+            echo "❌ EC2_HOST가 설정되지 않았습니다."
+            exit 1
+          fi
+
+          if [ -z "$EC2_USER" ]; then
+            echo "⚠️ EC2_USER가 설정되지 않아 기본값 'ubuntu'를 사용합니다."
+            EC2_USER="ubuntu"
+          fi
+
+          # 사용자 이름에 잘못된 문자가 있는지 확인
+          if echo "$EC2_USER" | grep -qE '[^a-zA-Z0-9_-]'; then
+            echo "❌ EC2_USER에 잘못된 문자가 포함되어 있습니다: $EC2_USER"
+            echo "💡 사용자 이름은 영문자, 숫자, 하이픈(-), 언더스코어(_)만 사용할 수 있습니다."
+            exit 1
+          fi
+
+          echo "📌 EC2_HOST: $EC2_HOST"
+          echo "📌 EC2_USER: $EC2_USER"
+
           # SSH 키 파일 존재 확인
           if [ ! -f "$SSH_KEY" ]; then
             echo "❌ SSH 키 파일을 찾을 수 없습니다: $SSH_KEY"
@@ -119,9 +169,12 @@ jobs:
           # SSH 연결 테스트
           echo "🔍 SSH 연결 테스트..."
           ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no -o ConnectTimeout=10 \
-            "$EC2_USER@$EC2_HOST" "echo 'SSH 연결 성공!'" || {
+            "${EC2_USER}@${EC2_HOST}" "echo 'SSH 연결 성공!'" || {
             echo "❌ SSH 연결 실패"
-            echo "💡 EC2_SSH_KEY와 EC2_HOST 설정을 확인하세요"
+            echo "💡 EC2_SSH_KEY, EC2_HOST, EC2_USER 설정을 확인하세요"
+            echo "💡 현재 설정:"
+            echo "   - EC2_HOST: $EC2_HOST"
+            echo "   - EC2_USER: $EC2_USER"
             exit 1
           }
 
@@ -131,15 +184,15 @@ jobs:
           rsync -avz -e "ssh -i $SSH_KEY -o StrictHostKeyChecking=no -o ConnectTimeout=10" \
             --exclude='.git' --exclude='__pycache__' --exclude='*.pyc' \
             --exclude='venv' --exclude='.env' --exclude='*.pyc' \
-            app/ "$EC2_USER@$EC2_HOST:/home/ubuntu/rag-app/app/"
+            app/ "${EC2_USER}@${EC2_HOST}:/home/ubuntu/rag-app/app/"
 
           # main.py를 rag-app 루트로 복사 (uvicorn 실행을 위해)
           echo "📋 main.py를 루트로 복사 중..."
-          ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no "$EC2_USER@$EC2_HOST" \
+          ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no "${EC2_USER}@${EC2_HOST}" \
             "cp /home/ubuntu/rag-app/app/main.py /home/ubuntu/rag-app/main.py 2>/dev/null || true"
 
           # EC2에서 배포 실행
-          ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no "$EC2_USER@$EC2_HOST" << ENDSSH
+          ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no "${EC2_USER}@${EC2_HOST}" << ENDSSH
             set -e
 
             echo "🚀 배포 시작..."
