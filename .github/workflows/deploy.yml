@@ -566,12 +566,26 @@ jobs:
               echo "   uvicorn main:app --host 0.0.0.0 --port 8000"
             fi
 
-            # 포트 리스닝 확인
+            # 포트 리스닝 확인 (ss 명령 우선 사용, netstat은 fallback)
             echo "🔍 포트 8000 리스닝 확인 중..."
-            if sudo netstat -tuln | grep -q ":8000 " || sudo ss -tuln | grep -q ":8000 "; then
-              echo "✅ 포트 8000이 리스닝 중입니다"
-              sudo netstat -tuln | grep ":8000 " || sudo ss -tuln | grep ":8000 "
-            else
+            PORT_CHECKED=false
+            if command -v ss &> /dev/null; then
+              if sudo ss -tuln | grep -q ":8000 "; then
+                echo "✅ 포트 8000이 리스닝 중입니다 (ss 명령 사용)"
+                sudo ss -tuln | grep ":8000 "
+                PORT_CHECKED=true
+              fi
+            fi
+
+            if [ "$PORT_CHECKED" = "false" ] && command -v netstat &> /dev/null; then
+              if sudo netstat -tuln | grep -q ":8000 "; then
+                echo "✅ 포트 8000이 리스닝 중입니다 (netstat 명령 사용)"
+                sudo netstat -tuln | grep ":8000 "
+                PORT_CHECKED=true
+              fi
+            fi
+
+            if [ "$PORT_CHECKED" = "false" ]; then
               echo "❌ 포트 8000이 리스닝되지 않습니다"
               echo "💡 서비스 로그 확인:"
               sudo journalctl -u fastapi-rag -n 50 --no-pager || true
@@ -613,7 +627,13 @@ jobs:
               echo "💡 서비스 로그:"
               sudo journalctl -u fastapi-rag -n 50 --no-pager || true
               echo "💡 포트 리스닝 확인:"
-              sudo netstat -tuln | grep ":8000 " || sudo ss -tuln | grep ":8000 " || echo "포트 8000이 리스닝되지 않음"
+              if command -v ss &> /dev/null; then
+                sudo ss -tuln | grep ":8000 " || echo "포트 8000이 리스닝되지 않음 (ss 명령 사용)"
+              elif command -v netstat &> /dev/null; then
+                sudo netstat -tuln | grep ":8000 " || echo "포트 8000이 리스닝되지 않음 (netstat 명령 사용)"
+              else
+                echo "⚠️ ss와 netstat 명령이 모두 없습니다. 포트 확인 불가"
+              fi
               exit 1
             fi
 
