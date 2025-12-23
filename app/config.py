@@ -23,9 +23,9 @@ class Settings(BaseSettings):
     postgres_user: str = os.getenv("POSTGRES_USER", "langchain_user")
     postgres_password: str = os.getenv("POSTGRES_PASSWORD", "langchain_password")
     # .env / 환경변수의 DATABASE_URL을 읽어올 필드
-    # 기본값: Neon PostgreSQL 연결 문자열
+    # 기본값 없음 - 환경 변수에서만 읽어옴
     database_url_env: Optional[str] = Field(
-        default="postgresql://neondb_owner:npg_2CUgeTP5KBuO@ep-restless-cell-a1n05rxq-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require",
+        default=None,
         alias="DATABASE_URL"
     )
 
