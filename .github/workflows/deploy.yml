@@ -246,53 +246,44 @@ jobs:
               echo "✅ 기존 .env 파일 확인됨"
             fi
 
+            # .env 파일 초기화 (기존 내용 백업 후 새로 작성)
+            echo "📝 .env 파일 재작성 중..."
+            ENV_BACKUP="\${ENV_FILE}.bak"
+            if [ -f "\${ENV_FILE}" ]; then
+              cp "\${ENV_FILE}" "\${ENV_BACKUP}"
+            fi
+
+            # .env 파일을 새로 작성 (기존 내용 제거)
+            > "\${ENV_FILE}"
+
             # OpenAI API 키 설정 (GitHub Secrets에서)
             if [ -n "${{ secrets.OPENAI_API_KEY }}" ]; then
-              # 기존 OPENAI_API_KEY가 있으면 업데이트, 없으면 추가
-              if grep -q "^OPENAI_API_KEY=" "\${ENV_FILE}" 2>/dev/null; then
-                # 기존 키 업데이트
-                sed -i "s|^OPENAI_API_KEY=.*|OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}|" "\${ENV_FILE}"
-                echo "✅ OPENAI_API_KEY 업데이트됨"
-              else
-                # 새로 추가
-                echo "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" >> "\${ENV_FILE}"
-                echo "✅ OPENAI_API_KEY 추가됨"
-              fi
+              printf 'OPENAI_API_KEY=%s\n' "${{ secrets.OPENAI_API_KEY }}" >> "\${ENV_FILE}"
+              echo "✅ OPENAI_API_KEY 추가됨"
             else
               echo "⚠️ OPENAI_API_KEY가 GitHub Secrets에 설정되지 않았습니다."
             fi
 
             # DATABASE_URL 설정 (GitHub Secrets에서)
             if [ -n "${{ secrets.DATABASE_URL }}" ]; then
-              # 기존 DATABASE_URL이 있으면 업데이트, 없으면 추가
-              if grep -q "^DATABASE_URL=" "\${ENV_FILE}" 2>/dev/null; then
-                # 기존 URL 업데이트
-                sed -i "s|^DATABASE_URL=.*|DATABASE_URL=${{ secrets.DATABASE_URL }}|" "\${ENV_FILE}"
-                echo "✅ DATABASE_URL 업데이트됨"
-              else
-                # 새로 추가
-                echo "DATABASE_URL=${{ secrets.DATABASE_URL }}" >> "\${ENV_FILE}"
-                echo "✅ DATABASE_URL 추가됨"
-              fi
+              # DATABASE_URL은 특수문자가 많으므로 printf로 안전하게 작성
+              printf 'DATABASE_URL=%s\n' "${{ secrets.DATABASE_URL }}" >> "\${ENV_FILE}"
+              echo "✅ DATABASE_URL 추가됨"
             else
               echo "⚠️ DATABASE_URL이 GitHub Secrets에 설정되지 않았습니다."
             fi
 
             # LLM_PROVIDER 설정 (GitHub Secrets에서)
             if [ -n "${{ secrets.LLM_PROVIDER }}" ]; then
-              # 기존 LLM_PROVIDER가 있으면 업데이트, 없으면 추가
-              if grep -q "^LLM_PROVIDER=" "\${ENV_FILE}" 2>/dev/null; then
-                # 기존 값 업데이트
-                sed -i "s|^LLM_PROVIDER=.*|LLM_PROVIDER=${{ secrets.LLM_PROVIDER }}|" "\${ENV_FILE}"
-                echo "✅ LLM_PROVIDER 업데이트됨"
-              else
-                # 새로 추가
-                echo "LLM_PROVIDER=${{ secrets.LLM_PROVIDER }}" >> "\${ENV_FILE}"
-                echo "✅ LLM_PROVIDER 추가됨"
-              fi
+              printf 'LLM_PROVIDER=%s\n' "${{ secrets.LLM_PROVIDER }}" >> "\${ENV_FILE}"
+              echo "✅ LLM_PROVIDER 추가됨"
             else
               echo "⚠️ LLM_PROVIDER가 GitHub Secrets에 설정되지 않았습니다."
             fi
+
+            # .env 파일 내용 확인 (디버깅용, 값은 마스킹)
+            echo "📋 .env 파일 구조 확인 (값은 마스킹):"
+            sed 's/=.*/=***/' "\${ENV_FILE}" || true
 
             # .env 파일 권한 확인
             chmod 600 "\${ENV_FILE}"
