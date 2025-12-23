@@ -4,7 +4,7 @@
  */
 
 // 환경 변수 접근 (Next.js는 NEXT_PUBLIC_ 접두사가 있으면 자동으로 클라이언트에 노출)
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
 export interface Message {
   role: 'user' | 'assistant'
