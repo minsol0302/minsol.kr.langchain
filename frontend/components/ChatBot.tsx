@@ -10,7 +10,7 @@ export default function ChatBot() {
   const [isMounted, setIsMounted] = useState(false)
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-  const messagesEndRef = useRef<HTMLDivElement>(null)
+  const messagesEndRef = useRef<HTMLDivElement>(null!)
   const inputRef = useRef<HTMLInputElement>(null)
 
   // 클라이언트 마운트 후 초기 메시지 설정
