@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { Send, Loader2, Bot, User } from 'lucide-react'
-import { chatAPI, Message, DocumentSource } from '../utils/api'
+import { chatAPI, Message, DocumentSource } from '../lib/api'
 
 export default function ChatBot() {
   // 클라이언트에서만 초기 메시지 설정 (hydration 오류 방지)
